@@ -7,7 +7,7 @@ The FluxPuppy data-logging app is Android interface to the LICOR LI-820 and LI-8
 The adapter presented here is based on an ESP32 development board with an OLED display. It connects the serial output of Li-820/840 Gas Analyzer to the FluxPuppy Android application using Bluetooth or USB, while data from additional sensors may be integrated into the data string sent to Flux Puppy.
 If used with an ESP32 OLED Module, selected data is displayed during the transmission. 
 
-![alt text](https://raw.githubusercontent.com/dabasler/fluxdatalink/doc/fluxdatalink.png)
+![figure](doc/fluxdatalink.png)
 
 ## Hardware
 
