@@ -26,6 +26,7 @@ ESP32 OLED PINOUT:
 14 RX   ----   TX RS232 SHIFTER from GasAnalyzer 
 15 TX   ----   RX RS232 SHIFTER from GasAnalyzer
 ```
+![figure](doc/prototype.jpeg)
 
 ## Software
 
