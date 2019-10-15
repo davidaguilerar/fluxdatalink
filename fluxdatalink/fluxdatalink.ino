@@ -78,9 +78,6 @@ void itsasecond() {
 Adafruit_ADS1115 ads1(ADS_1);  // construct an ads1115 at address 0x49
 Adafruit_ADS1115 ads2(ADS_2);  // construct an ads1115 at address 0x48
 
-ads1.setGain(GAIN_SIXTEEN); // any other measurement
-ads2.setGain(GAIN_ONE);  // this is for thermistor
-
 float scaleads1 = 0.0078125; // mV/number
 float scaleads2 = 0.125; // mV/number
 
@@ -98,7 +95,7 @@ float volt107   = NAN;   //107 temperature probe
 float voltsi111a = NAN;  //thermopile for SI-111
 float voltsi111b = NAN; //thermistor for SI-111
 float voltli190r = NAN; //LI-190R PAR radiometer
-float refvolt = 3.3; // 3.3V applied to ADS1115
+float refvolt = 3300; // 3.3V applied to ADS1115
 
 //################### CALIBRATION CONSTANTS FOR SPECIFIC SENSORS, OBTAINED FROM ITS FACTORY CALIBRATION SHEET
 // THIS CONSTANTS ARE UNIQUE FOR EACH SENSOR. YOU MUST EDIT THIS PART OF CODE
@@ -121,14 +118,50 @@ void get_environ_data() {
 
   tempvalue = NAN; // FROM 107 temperature probe
   parvalue = NAN; // FROM LI-190R
-  tptempvalue = NAN; // FROM SI-111 (thermopile)
+  //tptempvalue = NAN; // FROM SI-111 (thermopile)
   tstempvalue = NAN; // FROM SI-111 (thermistor)
   canopyvalue = NAN; // FROM SI-111 and computed
 
   if (i2cReady(ADS_1) && i2cReady(ADS_2)) {
     // read data from ADC
+    int16_t conv0;
+    uint16_t conv1, conv2, conv3;
+    double Rs;
+    double cA1 = 8.27111E-4; 
+    double cB1 = 2.088020E-4;
+    double cC1 = 8.0592E-8;
+    
+    conv0 = ads1.readADC_Differential_2_3(); // termopila
+    conv1 = ads1.readADC_SingleEnded(0); // LI-190R
+    conv2 = ads1.readADC_SingleEnded(1); // T-107
+    conv3 = ads2.readADC_SingleEnded(0); // termistor
 
+    // convert numbers to physical units
+    voltsi111a = conv0 * scaleads1;
+    voltli190r = conv1 * scaleads1;
+    volt107    = conv2 * scaleads1;
+    voltsi111b = conv3 * scaleads2;
 
+    // 107 temperature probe conversion
+    Rs = 1000 * (refvolt/volt107) - 250000;
+    tempvalue = (1/(cA1 + cB1*log(Rs) + cC1*pow(log(Rs),3))) - 273.15;
+
+    // LI-190R PAR conversion
+    parvalue = voltli190r * licor_calib;
+
+    // SI-111 Radiometer conversion
+    double sM, sB, Rt, argum;
+    double dA1 = 1.129241-3; 
+    double dB1 = 2.341077E-4;
+    double dC1 = 8.775468E-8;
+    
+    Rt = 24900*((refvolt/voltsi111b)-1);
+    tstempvalue = (1/(dA1 + dB1*log(Rt) + dC1*pow(log(Rt),3))) - 273.15;
+    sM = m0 +  (m1 * tstempvalue) + (m2*pow(tstempvalue,2));
+    sB = b0 +  (b1 * tstempvalue) + (b2*pow(tstempvalue,2));
+    argum = pow(tstempvalue+273.15,4)+(sM * voltsi111a)+ sB;
+    canopyvalue = sqrt(sqrt(argum)) - 273.15;
+    
   }
 }
 
@@ -268,7 +301,11 @@ void setup() {
   SerialBT.begin(9600);
   //LICOR
   Serial1.begin(9600);
-
+  // ADS1115
+  ads1.setGain(GAIN_SIXTEEN); // any other measurement
+  ads2.setGain(GAIN_ONE);  // this is for thermistor
+  ads1.begin();
+  ads2.begin();
   //Timer
   timer1.attach(1, itsasecond);
 
